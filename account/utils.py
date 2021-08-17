@@ -26,3 +26,5 @@ def generate_access_token(user):
                 'iat': datetime.utcnow(),}
     access_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
     return access_token
+
+#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
