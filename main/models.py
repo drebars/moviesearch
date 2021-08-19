@@ -1,12 +1,12 @@
 from django.db import models
 from datetime import date
-
+from account.models import CustomUser
 from django.urls import reverse
 
 
 class Category(models.Model):
     """Категории"""
-    name = models.CharField("Категория", max_length=150)
+    name = models.CharField("Категория", max_length=150, unique=True)
     description = models.TextField("Описание")
     url = models.SlugField(max_length=160, unique=True)
 
@@ -71,7 +71,7 @@ class Movie(models.Model):
         "Сборы в мире", default=0, help_text="указывать сумму в долларах"
     )
     category = models.ForeignKey(
-        Category, verbose_name="Категория", on_delete=models.SET_NULL, null=True)
+        Category, verbose_name="Категория", on_delete=models.SET_NULL, null=True, related_name="category")
     url = models.SlugField(max_length=130, unique=True)
     draft = models.BooleanField("Черновик", default=False)
 
@@ -88,48 +88,40 @@ class Movie(models.Model):
         verbose_name = "Фильм"
         verbose_name_plural = "Фильмы"
 
+class Rating(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='ratings')
+    value = models.SmallIntegerField("Значение")
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="rating")
 
 
-class RatingStar(models.Model):
-    """Звезда рейтинга"""
-    value = models.SmallIntegerField("Значение", default=0)
 
     def __str__(self):
         return f'{self.value}'
 
-    class Meta:
-        verbose_name = "Звезда рейтинга"
-        verbose_name_plural = "Звезды рейтинга"
-        ordering = ["-value"]
 
-
-class Rating(models.Model):
-    """Рейтинг"""
-    ip = models.CharField("IP адрес", max_length=15)
-    star = models.ForeignKey(RatingStar, on_delete=models.CASCADE, verbose_name="звезда")
-    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, verbose_name="фильм")
-
-    def __str__(self):
-        return f"{self.star} - {self.movie}"
-
-    class Meta:
-        verbose_name = "Рейтинг"
-        verbose_name_plural = "Рейтинги"
 
 
 class Review(models.Model):
     """Отзывы"""
     email = models.EmailField()
-    name = models.CharField("Имя", max_length=100)
+    name = models.CharField(max_length=120, verbose_name="Имя")
     text = models.TextField("Сообщение", max_length=5000)
     parent = models.ForeignKey(
         'self', verbose_name="Родитель", on_delete=models.SET_NULL, blank=True, null=True, related_name="replies"
     )
     movie = models.ForeignKey(Movie, verbose_name="фильм", on_delete=models.CASCADE, related_name="reviews")
-
     def __str__(self):
         return f"{self.name} - {self.movie}"
 
     class Meta:
         verbose_name = "Отзыв"
         verbose_name_plural = "Отзывы"
+
+
+class Like(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="likes")
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="like")
+    like = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.user.email

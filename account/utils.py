@@ -8,23 +8,14 @@ from django.utils.html import strip_tags
 import jwt
 
 
-def send_activation_code(email, activation_code):
-    context = {
-        'text_detail': 'Thank you for registration on our site! LOL!',
-        'email': email,
-        'domain': 'http://localhost:8000',
-        'activation_code': activation_code
-    }
-    msg_html = render_to_string('email.html', context)
-    message = strip_tags(msg_html)
-    send_mail('Activate your account LOL!', message, 'stackoverflow_adminLOL@gmail.com', [email], html_message=msg_html,
-                                fail_silently=False)
-
-def generate_access_token(user):
-    payload = {
-                'exp': datetime.utcnow() + timedelta(days=1, minutes=0),
-                'iat': datetime.utcnow(),}
-    access_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
-    return access_token
+def send_activation_code(email, activation_code, status):
+    if status == 'register':
+        url =f'http://localhost:7000/api/v1/activate/{activation_code}'
+        message = f'Code: {url}'
+        send_mail('Activate your account !', message, 'stackoverflow_adminLOL@gmail.com', [email],
+                                    fail_silently=False)
+    elif status == 'reset_password':
+        send_mail('Reset your Password', f"Код Активации:{activation_code}", 'StackOverFlow_admin@gmail.com', [email, ],
+                  fail_silently=False)
 
 #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

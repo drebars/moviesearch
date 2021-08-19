@@ -1,6 +1,7 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils.crypto import get_random_string
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password, **extra_fields):
@@ -9,6 +10,7 @@ class CustomUserManager(BaseUserManager):
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
+        user.create_activation_code()
         user.save(using=self._db)
         return user
 
@@ -27,7 +29,9 @@ class CustomUserManager(BaseUserManager):
 class CustomUser(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
+    name = models.CharField(max_length=70)
     is_active = models.BooleanField(default=False)
+    is_staff = models.BooleanField(default=False)
     activation_code = models.CharField(max_length=25, blank=True)
 
     USERNAME_FIELD = 'email'
@@ -39,12 +43,10 @@ class CustomUser(AbstractUser):
         return self.email
 
     def create_activation_code(self):
-        import hashlib
-        string = self.email + (str(id))
-        encode = string.encode()
-        mg5 = hashlib.md5(encode)
-        activation_code = hashlib.hexdigest(mg5)
-        self.activation_code = activation_code
+        code = get_random_string(length=25,
+                                 allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789$%&')
+        print(code)
+        self.activation_code = code
 
     """
     IN SETTINGS:

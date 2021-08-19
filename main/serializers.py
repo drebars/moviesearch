@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
-
-from .models import Movie, Actor, Review, Rating
-
+from account.models import CustomUser
+from .models import *
+from decimal import Decimal
 
 class ActorListSerializer(ModelSerializer):
     # СПИСОК АКТЕРОВ И РЕЖИССЕРОВ
@@ -35,7 +35,6 @@ class RecursiveSerializer(serializers.Serializer):
 
 class ReviewCreateSerializer(ModelSerializer):
         # для создание комментов
-
         class Meta:
             model = Review
             fields = '__all__'
@@ -48,7 +47,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         list_serializer_class = FilterReviewListSerializer
         model = Review
-        fields = ("name", "text", "replies")
+        fields = ("name", "text", "replies", 'movie')
 
 
 class MovieListSerializer(ModelSerializer):
@@ -58,6 +57,31 @@ class MovieListSerializer(ModelSerializer):
     class Meta:
         model = Movie
         fields = ('title', 'tagline', 'category')
+
+        # def to_representation(self, instance):
+        #     representation = super().to_representation(instance)
+        #     action = self.context.get('action')
+        #     if action == 'list' or action == 'retrieve':
+        #         likes = Like.objects.filter(movie=instance)
+        #         if not likes:
+        #             representation['likes'] = 'null'
+        #         else:
+        #             representation['likes'] = likes.count()
+        #     return representation
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['likes'] = instance.like.count()
+        rates = Rating.objects.filter(movie=instance)
+        if not rates:
+            representation['rating'] = 'null'
+        else:
+            sum = 0
+            for i in rates:
+                sum = sum + i.value
+            representation['rating'] = Decimal(sum) / Decimal(Rating.objects.filter(movie=instance).count())
+
+        return representation
 
 
 class MovieDetailSerializer(ModelSerializer):
@@ -71,16 +95,6 @@ class MovieDetailSerializer(ModelSerializer):
          model = Movie
          exclude = ('draft',)
 
-class CreateRatingSerializer(ModelSerializer):
-    class Meta:
-        model = Rating
-        fields = ('star', 'movie')
-
-    def create(self, validated_data):
-        rating = Rating.objects.update_or_create(ip=validated_data.get('ip', None),
-                                                 movie=validated_data.get('movie', None),
-                                                 defaults={'star': validated_data.get('star')})
-        return rating
 
 class MovieCreateSerializer(ModelSerializer):
     # для создание фильмов
@@ -88,3 +102,24 @@ class MovieCreateSerializer(ModelSerializer):
     class Meta:
         model = Movie
         fields = '__all__'
+
+class RatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rating
+        fields = ("user", "value", "movie")
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        rating, obj = Rating.objects.update_or_create(user__email=request.user.email, **validated_data)
+        return rating
+
+class LikeSerializer(ModelSerializer):
+    class Meta:
+        model = Like
+        fields = '__all__'
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        likes, obj = Like.objects.update_or_create(user__email=request.user.email, **validated_data)
+        return likes
+

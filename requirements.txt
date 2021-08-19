@@ -2,3 +2,7 @@ Django==3.2
 Pillow==7.1
 psycopg2-binary==2.8.5
 django-filter
+pyjwt
+django-cors-headers
+python-decouple==3.4
+drf_yasg==1.20
